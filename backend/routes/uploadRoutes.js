@@ -1,6 +1,8 @@
 import express from "express";
 import multer from "multer";
 import { uploadToVolume } from "../services/uploadService.js";
+import { insertFileRecord } from "../services/lakebaseService.js";
+import { databricksConfig } from "../config/databricks.js";
 
 const MAX_SIZE = 25 * 1024 * 1024; // 25 MB
 
@@ -45,10 +47,21 @@ router.post("/", (req, res) => {
         gjahr,
         poper,
       });
+
+      const record = await insertFileRecord({
+        fileName: req.file.originalname,
+        volumePath: result.path,
+        bsarId,
+        gjahr,
+        poper,
+        contentType: req.file.mimetype,
+        sizeBytes: req.file.size,
+        uploadedBy: databricksConfig.clientId,
+      });
+
       return res.json({
         message: "File uploaded successfully",
-        fileName: req.file.originalname,
-        path: result.path,
+        file: record,
       });
     } catch (err) {
       console.error("Upload error:", err);

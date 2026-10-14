@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 import "dotenv/config";
 import databricksRoutes from "./routes/databricksRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import filesRoutes from "./routes/filesRoutes.js";
+import { ensureTable } from "./services/lakebaseService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +35,7 @@ app.use(express.static(staticDir));
 
 app.use("/api/databricks", databricksRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/files", filesRoutes);
 
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from Waft Tech!" });
@@ -72,4 +75,13 @@ app.get("*", (req, res) => {
 
 app.listen(port, () => {
   console.log(`Application is running on port ${port}`);
+
+  ensureTable()
+    .then(() => console.log("Lakebase table 'uploaded_files' is ready."))
+    .catch((err) =>
+      console.error(
+        "Could not ensure Lakebase table on startup:",
+        err.message,
+      ),
+    );
 });

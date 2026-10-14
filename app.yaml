@@ -1,8 +1,5 @@
 command: ["node", "backend/server.js"]
 
-env:
-  - name: SA_CLIENT_ID
-    valueFrom: sa-client
-
-  - name: SA_CLIENT_SECRET
-    valueFrom: sa-secret
+# DATABRICKS_HOST, DATABRICKS_CLIENT_ID and DATABRICKS_CLIENT_SECRET are
+# injected automatically by Databricks Apps for the app's service principal.
+# No additional env vars are required for Volumes, SQL or Lakebase access.

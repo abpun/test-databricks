@@ -1,18 +1,16 @@
 import { useState, useRef } from "react";
 
-interface UploadResult {
-  message: string;
-  fileName: string;
-  path: string;
+interface Props {
+  onUploaded?: () => void;
 }
 
-export default function FileUpload() {
+export default function FileUpload({ onUploaded }: Props) {
   const [bsarId, setBsarId] = useState("");
   const [gjahr, setGjahr] = useState("");
   const [poper, setPoper] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<UploadResult | null>(null);
+  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -21,7 +19,7 @@ export default function FileUpload() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] ?? null;
     setError("");
-    setResult(null);
+    setSuccess("");
 
     if (!selected) {
       setFile(null);
@@ -51,7 +49,7 @@ export default function FileUpload() {
 
     setUploading(true);
     setError("");
-    setResult(null);
+    setSuccess("");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -60,19 +58,16 @@ export default function FileUpload() {
     formData.append("poper", poper);
 
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error || "Upload failed");
       } else {
-        setResult(data);
+        setSuccess(`Uploaded ${data.file?.file_name ?? file.name}`);
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
+        onUploaded?.();
       }
     } catch (err: any) {
       setError(err.message || "Upload failed");
@@ -84,8 +79,9 @@ export default function FileUpload() {
   const isValid = file && bsarId && gjahr && poper;
 
   return (
-    <section className="upload-card">
-      <h2>Upload File to Databricks Volume</h2>
+    <section className="card upload-card">
+      <h2>Upload file</h2>
+      <p className="muted">Excel (.xlsx) up to 25 MB, stored to the Databricks Volume.</p>
 
       <form onSubmit={handleSubmit} className="upload-form">
         <div className="form-row">
@@ -95,7 +91,7 @@ export default function FileUpload() {
               type="text"
               value={bsarId}
               onChange={(e) => setBsarId(e.target.value)}
-              placeholder="e.g. 1001"
+              placeholder="1001"
               required
             />
           </label>
@@ -105,7 +101,7 @@ export default function FileUpload() {
               type="text"
               value={gjahr}
               onChange={(e) => setGjahr(e.target.value)}
-              placeholder="e.g. 2024"
+              placeholder="2024"
               required
             />
           </label>
@@ -115,43 +111,34 @@ export default function FileUpload() {
               type="text"
               value={poper}
               onChange={(e) => setPoper(e.target.value)}
-              placeholder="e.g. 01"
+              placeholder="01"
               required
             />
           </label>
         </div>
 
-        <div className="file-input-row">
-          <label>
-            File (.xlsx, max 25 MB)
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx"
-              onChange={handleFileChange}
-              required
-            />
-          </label>
-          {file && (
-            <span className="file-info">
-              {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-            </span>
-          )}
-        </div>
+        <label className="file-field">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx"
+            onChange={handleFileChange}
+            required
+          />
+        </label>
+        {file && (
+          <span className="file-info">
+            {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB
+          </span>
+        )}
 
         <button type="submit" disabled={!isValid || uploading}>
-          {uploading ? "Uploading..." : "Upload"}
+          {uploading ? "Uploading…" : "Upload"}
         </button>
       </form>
 
-      {error && <p className="upload-error">{error}</p>}
-
-      {result && (
-        <div className="upload-success">
-          <p>Uploaded: {result.fileName}</p>
-          <p className="upload-path">{result.path}</p>
-        </div>
-      )}
+      {error && <p className="msg error">{error}</p>}
+      {success && <p className="msg success">{success}</p>}
     </section>
   );
 }

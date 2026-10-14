@@ -8,6 +8,7 @@ import databricksRoutes from "./routes/databricksRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import filesRoutes from "./routes/filesRoutes.js";
 import { ensureTable } from "./services/lakebaseService.js";
+import { inspectIdentity } from "./services/databricksAuth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,17 @@ app.get("/api/hello", (req, res) => {
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "healthy" });
+});
+
+// Diagnostic: shows the service principal's granted OAuth scope and token
+// claims (never the token or secret). Remove once you've verified scope.
+app.get("/api/debug/identity", async (req, res) => {
+  try {
+    const info = await inspectIdentity();
+    res.json(info);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/api/data", (req, res) => {

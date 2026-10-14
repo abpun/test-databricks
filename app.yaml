@@ -1,0 +1,8 @@
+command: ["node", "backend/server.js"]
+
+env:
+  - name: SA_CLIENT_ID
+    valueFrom: sa-client
+
+  - name: SA_CLIENT_SECRET
+    valueFrom: sa-secret

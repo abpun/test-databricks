@@ -28,3 +28,15 @@ export async function uploadToVolume(fileBuffer, fileName, { bsarId, gjahr, pope
 
   return { path: volumeFilePath };
 }
+
+/**
+ * Fetches a file's bytes from the Volume. Returns the raw fetch Response so the
+ * caller can stream the body straight to the client.
+ */
+export async function downloadFromVolume(volumePath) {
+  const token = await getAccessToken();
+  const config = getDatabricksConfig();
+  const url = `https://${config.host}/api/2.0/fs/files${volumePath}`;
+
+  return fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+}

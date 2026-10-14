@@ -35,6 +35,19 @@ function fileExt(name: string) {
   return parts.length > 1 ? parts.pop()!.toUpperCase() : "FILE";
 }
 
+const IMAGE_EXT = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
+const VIDEO_EXT = ["mp4", "mov", "webm", "m4v"];
+const AUDIO_EXT = ["mp3", "wav", "ogg", "oga", "m4a", "aac", "flac"];
+
+function kindOf(f: UploadedFile): "image" | "video" | "audio" | "other" {
+  const type = (f.content_type || "").toLowerCase();
+  const ext = f.file_name.split(".").pop()?.toLowerCase() ?? "";
+  if (type.startsWith("image/") || IMAGE_EXT.includes(ext)) return "image";
+  if (type.startsWith("video/") || VIDEO_EXT.includes(ext)) return "video";
+  if (type.startsWith("audio/") || AUDIO_EXT.includes(ext)) return "audio";
+  return "other";
+}
+
 export default function FileGrid({ files, loading, error }: Props) {
   return (
     <section className="card">
@@ -53,7 +66,36 @@ export default function FileGrid({ files, loading, error }: Props) {
         <div className="file-grid">
           {files.map((f) => (
             <article key={f.id} className="file-card">
-              <div className="file-card-icon">{fileExt(f.file_name)}</div>
+              <a
+                className="file-preview"
+                href={`/api/files/${f.id}/content`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {kindOf(f) === "image" ? (
+                  <img
+                    src={`/api/files/${f.id}/content`}
+                    alt={f.file_name}
+                    loading="lazy"
+                  />
+                ) : kindOf(f) === "video" ? (
+                  <video src={`/api/files/${f.id}/content`} preload="metadata" muted />
+                ) : kindOf(f) === "audio" ? (
+                  <div className="file-preview-fallback audio">
+                    <span className="file-card-icon">{fileExt(f.file_name)}</span>
+                    <audio
+                      src={`/api/files/${f.id}/content`}
+                      controls
+                      preload="none"
+                      onClick={(e) => e.preventDefault()}
+                    />
+                  </div>
+                ) : (
+                  <div className="file-preview-fallback">
+                    <span className="file-card-icon">{fileExt(f.file_name)}</span>
+                  </div>
+                )}
+              </a>
               <h3 title={f.file_name}>{f.file_name}</h3>
               <dl>
                 <div>

@@ -126,6 +126,16 @@ export async function insertFileRecord({
   return rows[0];
 }
 
+export async function getFileById(id) {
+  const sql = `
+    SELECT id, file_name, volume_path, content_type, size_bytes
+    FROM ${TABLE}
+    WHERE id = $1;
+  `;
+  const { rows } = await query(sql, [id]);
+  return rows[0] ?? null;
+}
+
 export async function listFiles(limit = 100) {
   const sql = `
     SELECT id, file_name, volume_path, bsar_id, gjahr, poper,

@@ -14,7 +14,22 @@ export default function FileUpload({ onUploaded }: Props) {
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const MAX_SIZE = 25 * 1024 * 1024;
+  const MAX_SIZE = 100 * 1024 * 1024;
+
+  const ALLOWED_EXTENSIONS = [
+    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+    "txt", "csv", "rtf", "md", "odt", "ods", "odp",
+    "jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "tif", "tiff", "heic", "heif",
+    "mp3", "wav", "flac", "aac", "ogg", "oga", "m4a", "wma",
+    "mp4", "mov", "avi", "mkv", "webm", "m4v",
+    "zip",
+  ];
+
+  const isAllowed = (f: File) => {
+    const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+    if (ALLOWED_EXTENSIONS.includes(ext)) return true;
+    return /^(image|audio|video)\//.test(f.type);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] ?? null;
@@ -26,15 +41,15 @@ export default function FileUpload({ onUploaded }: Props) {
       return;
     }
 
-    if (!selected.name.toLowerCase().endsWith(".xlsx")) {
-      setError("Only .xlsx files are allowed");
+    if (!isAllowed(selected)) {
+      setError("Unsupported file type");
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     if (selected.size > MAX_SIZE) {
-      setError("File exceeds 25 MB limit");
+      setError("File exceeds 100 MB limit");
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
@@ -81,7 +96,9 @@ export default function FileUpload({ onUploaded }: Props) {
   return (
     <section className="card upload-card">
       <h2>Upload file</h2>
-      <p className="muted">Excel (.xlsx) up to 25 MB, stored to the Databricks Volume.</p>
+      <p className="muted">
+        Documents, images, audio or video up to 100 MB, stored to the Databricks Volume.
+      </p>
 
       <form onSubmit={handleSubmit} className="upload-form">
         <div className="form-row">
@@ -121,7 +138,7 @@ export default function FileUpload({ onUploaded }: Props) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx"
+            accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.md,.odt,.ods,.odp,.zip"
             onChange={handleFileChange}
             required
           />

@@ -30,6 +30,11 @@ function formatDate(iso: string) {
   return d.toLocaleString();
 }
 
+function fileExt(name: string) {
+  const parts = name.split(".");
+  return parts.length > 1 ? parts.pop()!.toUpperCase() : "FILE";
+}
+
 export default function FileGrid({ files, loading, error }: Props) {
   return (
     <section className="card">
@@ -48,7 +53,7 @@ export default function FileGrid({ files, loading, error }: Props) {
         <div className="file-grid">
           {files.map((f) => (
             <article key={f.id} className="file-card">
-              <div className="file-card-icon">XLSX</div>
+              <div className="file-card-icon">{fileExt(f.file_name)}</div>
               <h3 title={f.file_name}>{f.file_name}</h3>
               <dl>
                 <div>

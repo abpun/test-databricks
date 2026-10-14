@@ -4,18 +4,38 @@ import { uploadToVolume } from "../services/uploadService.js";
 import { insertFileRecord } from "../services/lakebaseService.js";
 import { databricksConfig } from "../config/databricks.js";
 
-const MAX_SIZE = 25 * 1024 * 1024; // 25 MB
+const MAX_SIZE = 100 * 1024 * 1024; // 100 MB
+
+// Allowed extensions: documents, images/photos, music/audio, video, archives.
+const ALLOWED_EXTENSIONS = new Set([
+  // documents
+  "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+  "txt", "csv", "rtf", "md", "odt", "ods", "odp",
+  // images / photos
+  "jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "tif", "tiff", "heic", "heif",
+  // music / audio
+  "mp3", "wav", "flac", "aac", "ogg", "oga", "m4a", "wma",
+  // video
+  "mp4", "mov", "avi", "mkv", "webm", "m4v",
+  // archives
+  "zip",
+]);
+
+function isAllowed(file) {
+  const ext = file.originalname.split(".").pop()?.toLowerCase() ?? "";
+  if (ALLOWED_EXTENSIONS.has(ext)) return true;
+  // Fallback: accept any image/audio/video by MIME type.
+  return /^(image|audio|video)\//.test(file.mimetype);
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_SIZE },
   fileFilter: (_req, file, cb) => {
-    const isXlsx =
-      file.mimetype ===
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-      file.originalname.toLowerCase().endsWith(".xlsx");
-    if (!isXlsx) {
-      return cb(new Error("Only .xlsx files are allowed"));
+    if (!isAllowed(file)) {
+      return cb(
+        new Error("Unsupported file type (documents, images, audio and video are allowed)"),
+      );
     }
     cb(null, true);
   },

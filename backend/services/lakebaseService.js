@@ -154,3 +154,67 @@ export async function listFiles(limit = 100) {
   const { rows } = await query(sql, [limit]);
   return rows;
 }
+
+/**
+ * Separates the two stages that both surface as connection failures:
+ *   1. minting the Lakebase credential (workspace OAuth + instance permission)
+ *   2. the Postgres login itself (requires a role named after the client id)
+ * Returns the stage that failed plus the raw Postgres error code, which
+ * distinguishes a missing role / bad password (28P01, 28000) from a missing
+ * database (3D000) or an unreachable host (ENOTFOUND, ETIMEDOUT).
+ */
+export async function diagnose() {
+  const result = {
+    endpoint: lakebaseConfig.endpoint,
+    host: lakebaseConfig.host,
+    database: lakebaseConfig.database,
+    role: lakebaseConfig.user,
+    mint: "not_attempted",
+    connect: "not_attempted",
+  };
+
+  let token;
+  try {
+    token = await getDbCredential();
+    result.mint = "ok";
+    result.token_length = token.length;
+  } catch (err) {
+    result.mint = "failed";
+    result.mint_error = err.message;
+    return result;
+  }
+
+  const client = new pg.Client({
+    host: lakebaseConfig.host,
+    port: lakebaseConfig.port,
+    database: lakebaseConfig.database,
+    user: lakebaseConfig.user,
+    password: token,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 15_000,
+  });
+
+  try {
+    await client.connect();
+    const { rows } = await client.query(
+      "SELECT current_user, current_database(), version()",
+    );
+    result.connect = "ok";
+    result.current_user = rows[0].current_user;
+    result.current_database = rows[0].current_database;
+  } catch (err) {
+    result.connect = "failed";
+    result.connect_error = err.message;
+    result.pg_code = err.code ?? null;
+    result.hint =
+      err.code === "28P01" || err.code === "28000"
+        ? `The credential was minted but Postgres rejected the login. The role "${lakebaseConfig.user}" most likely does not exist on this instance. Create it as databricks_superuser: CREATE ROLE "${lakebaseConfig.user}" WITH LOGIN IN ROLE databricks_superuser;`
+        : err.code === "3D000"
+          ? `Database "${lakebaseConfig.database}" does not exist on this instance; set PGDATABASE.`
+          : "Not an authentication failure; see connect_error.";
+  } finally {
+    await client.end().catch(() => {});
+  }
+
+  return result;
+}

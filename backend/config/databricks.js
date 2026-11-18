@@ -28,6 +28,8 @@ export const lakebaseConfig = {
   user: process.env.PGUSER || process.env.DATABRICKS_CLIENT_ID || "",
 };
 
+let loggedTarget = false;
+
 export const getLakebaseConfig = () => {
   const { endpoint, host, user } = lakebaseConfig;
   const missing = [
@@ -40,12 +42,14 @@ export const getLakebaseConfig = () => {
     throw new Error(`Missing Lakebase config. Set: ${missing.join(", ")}`);
   }
 
-  // Cheap sanity check: the endpoint id should appear in the host name.
-  const endpointId = endpoint.split("/").pop();
-  if (endpointId && host.startsWith("ep-") && !host.includes(endpointId)) {
-    console.warn(
-      `[lakebase] LAKEBASE_ENDPOINT ("${endpoint}") and PGHOST ("${host}") may ` +
-        `refer to different instances; this causes password authentication failures.`,
+  // The endpoint path and the host cannot be cross-checked from their text
+  // alone (the path ends in a logical name, the host is a generated id), so
+  // log both once: a stale pairing is only diagnosable by reading them.
+  if (!loggedTarget) {
+    loggedTarget = true;
+    console.log(
+      `[lakebase] credential endpoint=${endpoint} -> connecting host=${host} ` +
+        `db=${lakebaseConfig.database} role=${user}`,
     );
   }
 

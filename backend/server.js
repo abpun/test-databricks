@@ -9,6 +9,7 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import filesRoutes from "./routes/filesRoutes.js";
 import { ensureTable } from "./services/lakebaseService.js";
 import { inspectIdentity } from "./services/databricksAuth.js";
+import { diagnose as diagnoseLakebase } from "./services/lakebaseService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,17 @@ app.get("/api/debug/identity", async (req, res) => {
   try {
     const info = await inspectIdentity();
     res.json(info);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Diagnostic: reports whether the Lakebase credential mint or the Postgres
+// login is the failing stage, with the raw PG error code. Remove once fixed.
+app.get("/api/debug/lakebase", async (req, res) => {
+  try {
+    const info = await diagnoseLakebase();
+    res.status(info.connect === "ok" ? 200 : 500).json(info);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

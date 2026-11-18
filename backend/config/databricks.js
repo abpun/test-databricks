@@ -21,7 +21,7 @@ export const lakebaseConfig = {
     "projects/bsar-app-test/branches/production/endpoints/primary",
   host:
     process.env.PGHOST ||
-    "ep-solitary-bird-d8y6m06l.database.us-east-2.cloud.databricks.com",
+    "ep-old-waterfall-d8acweyn.database.us-east-2.cloud.databricks.com",
   port: Number(process.env.PGPORT || 5432),
   database: process.env.PGDATABASE || "databricks_postgres",
   // The Postgres role for the app's service principal is its client id.

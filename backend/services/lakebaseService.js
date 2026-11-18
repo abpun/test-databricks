@@ -1,5 +1,9 @@
 import pg from "pg";
-import { getDatabricksConfig, lakebaseConfig } from "../config/databricks.js";
+import {
+  getDatabricksConfig,
+  getLakebaseConfig,
+  lakebaseConfig,
+} from "../config/databricks.js";
 import { getAccessToken } from "./databricksAuth.js";
 
 const { Pool } = pg;
@@ -20,6 +24,7 @@ async function getDbCredential() {
   }
 
   const config = getDatabricksConfig();
+  const lakebase = getLakebaseConfig();
   const accessToken = await getAccessToken();
 
   const res = await fetch(`https://${config.host}/api/2.0/postgres/credentials`, {
@@ -28,7 +33,7 @@ async function getDbCredential() {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ endpoint: lakebaseConfig.endpoint, ttl: "3600s" }),
+    body: JSON.stringify({ endpoint: lakebase.endpoint, ttl: "3600s" }),
   });
 
   if (!res.ok) {
@@ -52,6 +57,8 @@ async function getDbCredential() {
 
 function getPool() {
   if (pool) return pool;
+
+  getLakebaseConfig();
 
   pool = new Pool({
     host: lakebaseConfig.host,

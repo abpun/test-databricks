@@ -2,4 +2,16 @@ command: ["node", "backend/server.js"]
 
 # DATABRICKS_HOST, DATABRICKS_CLIENT_ID and DATABRICKS_CLIENT_SECRET are
 # injected automatically by Databricks Apps for the app's service principal.
-# No additional env vars are required for Volumes, SQL or Lakebase access.
+#
+# Lakebase must be pointed at explicitly. Both values below have to name the
+# SAME instance, or Postgres rejects the login with
+#   password authentication failed for user '<client-id>'
+# Find them on the Lakebase instance page: the endpoint path under Connection
+# details, and the host it resolves to.
+env:
+  - name: LAKEBASE_ENDPOINT
+    value: "projects/bsar-app-test/branches/production/endpoints/primary"
+  - name: PGHOST
+    value: "ep-old-waterfall-d8acweyn.database.us-east-2.cloud.databricks.com"
+  - name: PGDATABASE
+    value: "databricks_postgres"

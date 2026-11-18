@@ -15,17 +15,41 @@ export const databricksConfig = {
 };
 
 // Lakebase (Autoscaling Postgres) connection settings.
+// LAKEBASE_ENDPOINT and PGHOST have no defaults on purpose: they must name the
+// SAME Lakebase instance. The credential is minted scoped to LAKEBASE_ENDPOINT,
+// so pointing it at one instance while PGHOST points at another fails with
+// "password authentication failed for user '<client-id>'".
 export const lakebaseConfig = {
-  endpoint:
-    process.env.LAKEBASE_ENDPOINT ||
-    "projects/bsar-app-test/branches/production/endpoints/primary",
-  host:
-    process.env.PGHOST ||
-    "ep-old-waterfall-d8acweyn.database.us-east-2.cloud.databricks.com",
+  endpoint: process.env.LAKEBASE_ENDPOINT || "",
+  host: process.env.PGHOST || "",
   port: Number(process.env.PGPORT || 5432),
   database: process.env.PGDATABASE || "databricks_postgres",
   // The Postgres role for the app's service principal is its client id.
   user: process.env.PGUSER || process.env.DATABRICKS_CLIENT_ID || "",
+};
+
+export const getLakebaseConfig = () => {
+  const { endpoint, host, user } = lakebaseConfig;
+  const missing = [
+    !endpoint && "LAKEBASE_ENDPOINT (e.g. projects/<project>/branches/<branch>/endpoints/<endpoint>)",
+    !host && "PGHOST (e.g. ep-xxxx.database.<region>.cloud.databricks.com)",
+    !user && "PGUSER or DATABRICKS_CLIENT_ID",
+  ].filter(Boolean);
+
+  if (missing.length) {
+    throw new Error(`Missing Lakebase config. Set: ${missing.join(", ")}`);
+  }
+
+  // Cheap sanity check: the endpoint id should appear in the host name.
+  const endpointId = endpoint.split("/").pop();
+  if (endpointId && host.startsWith("ep-") && !host.includes(endpointId)) {
+    console.warn(
+      `[lakebase] LAKEBASE_ENDPOINT ("${endpoint}") and PGHOST ("${host}") may ` +
+        `refer to different instances; this causes password authentication failures.`,
+    );
+  }
+
+  return lakebaseConfig;
 };
 
 export const getDatabricksConfig = () => {

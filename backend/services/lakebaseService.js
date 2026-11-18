@@ -202,6 +202,31 @@ export async function diagnose() {
     result.connect = "ok";
     result.current_user = rows[0].current_user;
     result.current_database = rows[0].current_database;
+
+    // Why CREATE TABLE may be failing, and where the table actually landed.
+    const { rows: priv } = await client.query(
+      `SELECT has_schema_privilege(current_user, 'public', 'CREATE') AS create_on_public,
+              has_schema_privilege(current_user, 'public', 'USAGE')  AS usage_on_public,
+              current_setting('search_path')                         AS search_path`,
+    );
+    result.create_on_public = priv[0].create_on_public;
+    result.usage_on_public = priv[0].usage_on_public;
+    result.search_path = priv[0].search_path;
+
+    const { rows: tbl } = await client.query(
+      `SELECT schemaname FROM pg_tables WHERE tablename = $1`,
+      [TABLE],
+    );
+    result.table_found_in_schemas = tbl.map((r) => r.schemaname);
+
+    if (!result.create_on_public && result.table_found_in_schemas.length === 0) {
+      result.hint =
+        `Login works, but the role lacks CREATE on schema public, so ensureTable() ` +
+        `cannot create "${TABLE}" and queries fail with 42P01. Run as ` +
+        `databricks_superuser: GRANT CREATE, USAGE ON SCHEMA public TO "${lakebaseConfig.user}";`;
+    } else if (result.table_found_in_schemas.length === 0) {
+      result.hint = `Role can create tables but "${TABLE}" does not exist yet; restart the app so ensureTable() runs, or check startup logs.`;
+    }
   } catch (err) {
     result.connect = "failed";
     result.connect_error = err.message;

@@ -104,8 +104,10 @@ app.listen(port, () => {
     .then(() => console.log("Lakebase table 'uploaded_files' is ready."))
     .catch((err) =>
       console.error(
-        "Could not ensure Lakebase table on startup:",
-        err.message,
+        `Could not ensure Lakebase table on startup: ${err.message}` +
+          `${err.code ? ` (pg code ${err.code})` : ""}. ` +
+          `Queries against the table will fail with 42P01 until this succeeds; ` +
+          `see GET /api/debug/lakebase.`,
       ),
     );
 });
